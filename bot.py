@@ -4,6 +4,7 @@ import requests
 from flask import Flask, request
 from telebot import TeleBot
 from dotenv import load_dotenv
+from telebot import types
 
 load_dotenv()
 
@@ -139,9 +140,9 @@ def link_handler(message):
 @app.route("/", methods=["POST"])
 def webhook():
     try:
-        update = request.get_json(force=True, silent=True)
-        if update:
-            bot.process_new_updates([bot.parse_update(update)])
+        json_str = request.get_data().decode("utf-8")
+        update = types.Update.de_json(json_str)
+        bot.process_new_updates([update])
     except Exception:
         pass
     return "OK", 200
