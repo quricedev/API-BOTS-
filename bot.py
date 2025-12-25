@@ -88,12 +88,12 @@ def detect(m):
         else:
             bot.edit_message_text("❌ *Failed to download pin*", m.chat.id, wait.message_id)
 
-@app.route("/", methods=["POST"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
     update = telebot.types.Update.de_json(request.data.decode("utf-8"))
     bot.process_new_updates([update])
     return "OK", 200
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
     return "Bot is running!"
