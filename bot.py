@@ -9,7 +9,6 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY = os.getenv("API_KEY")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 REEL_API = os.getenv("REEL_API")
 PIN_API = os.getenv("PIN_API")
 INFO_API = os.getenv("INFO_API")
@@ -35,8 +34,17 @@ def start(m):
 @bot.message_handler(commands=['info'])
 def info(m):
     try:
-        username = m.text.split()[1]
-        r = requests.get(INFO_API, params={"key": API_KEY, "username": username}).json()
+        parts = m.text.split()
+        if len(parts) < 2:
+            bot.reply_to(m, "❌ *Usage:* `/info username`")
+            return
+
+        r = requests.get(
+            INFO_API,
+            params={"key": API_KEY, "username": parts[1]},
+            timeout=15
+        ).json()
+
         d = r["data"]
 
         caption = (
@@ -54,7 +62,7 @@ def info(m):
 
         bot.send_photo(m.chat.id, d["profile_image_hd"], caption=caption)
     except:
-        bot.reply_to(m, "❌ *Usage:* `/info username`")
+        bot.reply_to(m, "❌ *Failed to fetch info*")
 
 @bot.message_handler(func=lambda m: True)
 def detect(m):
@@ -62,49 +70,23 @@ def detect(m):
 
     if "instagram.com" in text:
         wait = bot.reply_to(m, "⏳ *Downloading Reel\\.\\.\\.*")
-
-        r = requests.get(REEL_API, params={"key": API_KEY, "url": text}).json()
+        r = requests.get(REEL_API, params={"key": API_KEY, "url": text}, timeout=20).json()
 
         if r.get("status") == "success":
-            bot.edit_message_text(
-                "✅ *Reel Downloaded*",
-                m.chat.id,
-                wait.message_id
-            )
-            bot.send_video(
-                m.chat.id,
-                r["video"],
-                caption="🎬 *Instagram Reel*\n\n@UseSir"
-            )
+            bot.edit_message_text("✅ *Reel Downloaded*", m.chat.id, wait.message_id)
+            bot.send_video(m.chat.id, r["video"], caption="🎬 *Instagram Reel*\n\n@UseSir")
         else:
-            bot.edit_message_text(
-                "❌ *Failed to download reel*",
-                m.chat.id,
-                wait.message_id
-            )
+            bot.edit_message_text("❌ *Failed to download reel*", m.chat.id, wait.message_id)
 
     elif "pin.it" in text or "pinterest.com" in text:
         wait = bot.reply_to(m, "⏳ *Downloading Pin\\.\\.\\.*")
-
-        r = requests.get(PIN_API, params={"key": API_KEY, "url": text}).json()
+        r = requests.get(PIN_API, params={"key": API_KEY, "url": text}, timeout=20).json()
 
         if r.get("status") == "success":
-            bot.edit_message_text(
-                "✅ *Pin Downloaded*",
-                m.chat.id,
-                wait.message_id
-            )
-            bot.send_photo(
-                m.chat.id,
-                r["photo"],
-                caption="📌 *Pinterest Image*\n\n@UseSir"
-            )
+            bot.edit_message_text("✅ *Pin Downloaded*", m.chat.id, wait.message_id)
+            bot.send_photo(m.chat.id, r["photo"], caption="📌 *Pinterest Image*\n\n@UseSir")
         else:
-            bot.edit_message_text(
-                "❌ *Failed to download pin*",
-                m.chat.id,
-                wait.message_id
-            )
+            bot.edit_message_text("❌ *Failed to download pin*", m.chat.id, wait.message_id)
 
 @app.route("/", methods=["POST"])
 def webhook():
@@ -115,7 +97,3 @@ def webhook():
 @app.route("/")
 def home():
     return "Bot is running!"
-
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL)
