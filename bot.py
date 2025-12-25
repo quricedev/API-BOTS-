@@ -45,7 +45,7 @@ def info(m):
             f"*Name:* {escape(d['full_name'])}\n"
             f"*Bio:* {escape(d['bio'])}\n\n"
             f"*Followers:* `{d['followers']}`\n"
-            f"*Following:* `{d['following'])}`\n"
+            f"*Following:* `{d['following']}`\n"
             f"*Posts:* `{d['posts']}`\n\n"
             f"*Verified:* `{d['is_verified']}`\n"
             f"*Private:* `{d['is_private']}`\n\n"
