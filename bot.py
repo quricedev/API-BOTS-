@@ -119,3 +119,13 @@ def webhook():
 @app.route("/", methods=["GET"])
 def home():
     return "Bot is running!"
+
+@app.route("/debug", methods=["GET"])
+def debug():
+    return {
+        "BOT_TOKEN_loaded": bool(BOT_TOKEN),
+        "API_KEY_loaded": bool(API_KEY),
+        "REEL_API_loaded": bool(REEL_API),
+        "PIN_API_loaded": bool(PIN_API),
+        "INFO_API_loaded": bool(INFO_API)
+    }
