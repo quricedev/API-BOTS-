@@ -138,7 +138,12 @@ def link_handler(message):
 
 @app.route("/", methods=["POST"])
 def webhook():
-    bot.process_new_updates([bot.parse_update(request.get_json())])
+    try:
+        update = request.get_json(force=True, silent=True)
+        if update:
+            bot.process_new_updates([bot.parse_update(update)])
+    except Exception:
+        pass
     return "OK", 200
 
 @app.route("/", methods=["GET"])
