@@ -16,8 +16,10 @@ INFO_API = os.getenv("INFO_API")
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="MarkdownV2")
 app = Flask(__name__)
 
+LAST_UPDATE_ID = 0
+
 def escape(text):
-    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', str(text))
+    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', str(text or ""))
 
 @bot.message_handler(commands=["start"])
 def start(m):
@@ -33,6 +35,9 @@ def start(m):
 
 @bot.message_handler(commands=["info"])
 def info(m):
+    if not m.text:
+        return
+
     parts = m.text.split()
     if len(parts) < 2:
         bot.send_message(m.chat.id, "❌ *Usage:* `/info username`")
@@ -42,12 +47,8 @@ def info(m):
         res = requests.get(
             INFO_API,
             params={"key": API_KEY, "username": parts[1]},
-            timeout=15
+            timeout=10
         )
-
-        if res.status_code != 200:
-            bot.send_message(m.chat.id, "❌ *API not responding*")
-            return
 
         data = res.json()
         if "data" not in data:
@@ -69,65 +70,50 @@ def info(m):
             f"[🔗 Open Profile]({escape(d.get('direct_link'))})"
         )
 
-        bot.send_photo(
-            m.chat.id,
-            d.get("profile_image_hd"),
-            caption=caption
-        )
+        bot.send_photo(m.chat.id, d.get("profile_image_hd"), caption=caption)
 
-    except:
+    except Exception:
         bot.send_message(m.chat.id, "❌ *Failed to fetch info*")
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda m: bool(m.text))
 def detect(m):
-    text = m.text or ""
+    text = m.text
 
     if "instagram.com" in text:
         wait = bot.send_message(m.chat.id, "⏳ *Downloading Reel\\.\\.\\.*")
         try:
-            r = requests.get(
-                REEL_API,
-                params={"key": API_KEY, "url": text},
-                timeout=20
-            ).json()
-
+            r = requests.get(REEL_API, params={"key": API_KEY, "url": text}, timeout=15).json()
             if r.get("status") == "success":
                 bot.edit_message_text("✅ *Reel Downloaded*", m.chat.id, wait.message_id)
-                bot.send_video(
-                    m.chat.id,
-                    r["video"],
-                    caption="🎬 *Instagram Reel*\n\n@UseSir"
-                )
+                bot.send_video(m.chat.id, r["video"], caption="🎬 *Instagram Reel*")
             else:
-                bot.edit_message_text("❌ *Failed to download reel*", m.chat.id, wait.message_id)
+                bot.edit_message_text("❌ *Failed*", m.chat.id, wait.message_id)
         except:
-            bot.edit_message_text("❌ *Error occurred*", m.chat.id, wait.message_id)
+            bot.edit_message_text("❌ *Error*", m.chat.id, wait.message_id)
 
     elif "pin.it" in text or "pinterest.com" in text:
         wait = bot.send_message(m.chat.id, "⏳ *Downloading Pin\\.\\.\\.*")
         try:
-            r = requests.get(
-                PIN_API,
-                params={"key": API_KEY, "url": text},
-                timeout=20
-            ).json()
-
+            r = requests.get(PIN_API, params={"key": API_KEY, "url": text}, timeout=15).json()
             if r.get("status") == "success":
                 bot.edit_message_text("✅ *Pin Downloaded*", m.chat.id, wait.message_id)
-                bot.send_photo(
-                    m.chat.id,
-                    r["photo"],
-                    caption="📌 *Pinterest Image*\n\n@UseSir"
-                )
+                bot.send_photo(m.chat.id, r["photo"], caption="📌 *Pinterest Image*")
             else:
-                bot.edit_message_text("❌ *Failed to download pin*", m.chat.id, wait.message_id)
+                bot.edit_message_text("❌ *Failed*", m.chat.id, wait.message_id)
         except:
-            bot.edit_message_text("❌ *Error occurred*", m.chat.id, wait.message_id)
+            bot.edit_message_text("❌ *Error*", m.chat.id, wait.message_id)
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    update = telebot.types.Update.de_json(request.data.decode("utf-8"))
-    bot.process_new_updates([update])
+    global LAST_UPDATE_ID
+    try:
+        update = telebot.types.Update.de_json(request.data.decode("utf-8"))
+        if update.update_id <= LAST_UPDATE_ID:
+            return "OK", 200
+        LAST_UPDATE_ID = update.update_id
+        bot.process_new_updates([update])
+    except Exception:
+        pass
     return "OK", 200
 
 @app.route("/", methods=["GET"])
